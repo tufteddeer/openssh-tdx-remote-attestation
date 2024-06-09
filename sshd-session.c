@@ -836,6 +836,44 @@ set_process_rdomain(struct ssh *ssh, const char *name)
 #endif
 }
 
+sig_atomic_t ra_ssh_finished = 0;
+
+static int
+ra_ssh_service_request(int type, u_int32_t seq, struct ssh *ssh)
+{
+
+	debug_f("ra_ssh_service_request");
+
+	char *service = NULL;
+	int r;
+
+	if ((r = sshpkt_get_cstring(ssh, &service, NULL)) != 0 ||
+		(r = sshpkt_get_end(ssh)) != 0)
+		fatal("failed to get cstring from service reqest");
+
+	if (strcmp(service, "ra-ssh-attestation") == 0) {
+		debug_f("got ra-ssh-attestation request");
+
+		if ((r = sshpkt_start(ssh, SSH2_MSG_SERVICE_ACCEPT)) != 0 ||
+			(r = sshpkt_put_cstring(ssh, service)) != 0 ||
+			(r = sshpkt_send(ssh)) != 0 ||
+			(r = ssh_packet_write_wait(ssh)) != 0)
+		{
+			fatal("failed to accept ra_ssh attestation request");
+		}
+		ra_ssh_finished = 1;
+
+	} else {
+		fatal("unexpected request");
+	}
+
+	r = 0;
+	free(service);
+
+	debug_f("leaving ra_ssh_service_request");
+	return r;
+}
+
 /*
  * Main program for the daemon.
  */
@@ -1282,6 +1320,16 @@ main(int ac, char **av)
 	/* authenticate user and start session */
 	do_ssh2_kex(ssh);
 	do_authentication2(ssh);
+
+	debug_f("post do_authentication2");
+
+	debug_f("registering RA-SSH dispatcher");
+
+	ssh_dispatch_init(ssh, dispatch_protocol_error);
+	ssh_dispatch_set(ssh, SSH2_MSG_SERVICE_REQUEST, &ra_ssh_service_request);
+	ssh_dispatch_run_fatal(ssh, DISPATCH_BLOCK, &ra_ssh_finished);
+
+	debug_f("post RA-SSH dispatch registration");
 
 	/*
 	 * The unprivileged child now transfers the current keystate and exits.

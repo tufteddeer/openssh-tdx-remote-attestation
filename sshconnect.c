@@ -1580,6 +1580,22 @@ out:
 	return r;
 }
 
+sig_atomic_t ra_ssh_finished = 0;
+
+static int
+ra_ssh_unexpected_msg(int type, u_int32_t seq, struct ssh *ssh) {
+    debug_f("unexpected message in RA SSH");
+    return 0;
+}
+
+static int
+ra_ssh_service_accept(int type, u_int32_t seq, struct ssh *ssh) {
+    debug_f("ra_ssh service accepted");
+
+    ra_ssh_finished = 1;
+    return 0;
+}
+
 /*
  * Starts a dialog with the server, and authenticates the current user on the
  * server.  This does not need any extra privileges.  The basic connection
@@ -1615,6 +1631,20 @@ ssh_login(struct ssh *ssh, Sensitive *sensitive, const char *orighost,
 	debug("Authenticating to %s:%d as '%s'", host, port, server_user);
 	ssh_kex2(ssh, host, hostaddr, port, cinfo);
 	ssh_userauth2(ssh, local_user, server_user, host, sensitive);
+
+	debug_f("sending RA-SSH service request");
+	if ((r = sshpkt_start(ssh, SSH2_MSG_SERVICE_REQUEST)) != 0 ||
+		(r = sshpkt_put_cstring(ssh, "ra-ssh-attestation")) != 0 ||
+		(r = sshpkt_send(ssh)) != 0)
+		fatal_fr(r, "send packet");
+	debug_f("post send RA-SSH service request");
+
+	debug_f("RA-SSH service request dispatch");
+	ssh_dispatch_init(ssh, &ra_ssh_unexpected_msg);
+	ssh_dispatch_set(ssh, SSH2_MSG_SERVICE_ACCEPT, &ra_ssh_service_accept);
+	ssh_dispatch_run(ssh, DISPATCH_BLOCK, &ra_ssh_finished);
+	debug_f("post RA-SSH service dispatch");
+
 	free(local_user);
 	free(host);
 }
