@@ -48,9 +48,9 @@ CC=@CC@
 LD=@LD@
 CFLAGS=@CFLAGS@
 CFLAGS_NOPIE=@CFLAGS_NOPIE@
-CPPFLAGS=-I. -I$(srcdir) @CPPFLAGS@ $(PATHS) @DEFS@
+CPPFLAGS=-I/opt/homebrew/include -I. -I$(srcdir) @CPPFLAGS@ $(PATHS) @DEFS@
 PICFLAG=@PICFLAG@
-LIBS=@LIBS@
+LIBS=@LIBS@ -lcurl -L/opt/homebrew/Cellar/jansson/2.14/lib -ljansson -L/opt/homebrew/Cellar/libjwt/1.17.2/lib/ -ljwt -lssl -L/opt/homebrew/Cellar/openssl@3/3.3.1/lib -lcrypto
 CHANNELLIBS=@CHANNELLIBS@
 K5LIBS=@K5LIBS@
 GSSLIBS=@GSSLIBS@
@@ -71,7 +71,7 @@ MKDIR_P=@MKDIR_P@
 
 .SUFFIXES: .lo
 
-TARGETS=ssh$(EXEEXT) sshd$(EXEEXT) sshd-session$(EXEEXT) ssh-add$(EXEEXT) ssh-keygen$(EXEEXT) ssh-keyscan${EXEEXT} ssh-keysign${EXEEXT} ssh-pkcs11-helper$(EXEEXT) ssh-agent$(EXEEXT) scp$(EXEEXT) sftp-server$(EXEEXT) sftp$(EXEEXT) ssh-sk-helper$(EXEEXT)
+TARGETS=ssh$(EXEEXT) sshd$(EXEEXT) sshd-session$(EXEEXT) ssh-add$(EXEEXT) ssh-keygen$(EXEEXT) ssh-keyscan${EXEEXT} ssh-keysign${EXEEXT} ssh-pkcs11-helper$(EXEEXT) ssh-agent$(EXEEXT) scp$(EXEEXT) sftp-server$(EXEEXT) sftp$(EXEEXT) ssh-sk-helper$(EXEEXT) azure_attestation_client$(EXEEXT)
 
 XMSS_OBJS=\
 	ssh-xmss.o \
@@ -118,7 +118,8 @@ LIBSSH_OBJS=${LIBOPENSSH_OBJS} \
 SKOBJS=	ssh-sk-client.o
 
 SSHOBJS= ssh.o readconf.o clientloop.o sshtty.o \
-	sshconnect.o sshconnect2.o mux.o $(SKOBJS)
+	sshconnect.o sshconnect2.o mux.o $(SKOBJS) \
+	azure_attestation_client.o
 
 SSHDOBJS=sshd.o \
 	platform-listen.o \
@@ -212,6 +213,9 @@ libssh.a: $(LIBSSH_OBJS)
 	$(RANLIB) $@
 
 ssh$(EXEEXT): $(LIBCOMPAT) libssh.a $(SSHOBJS)
+	$(LD) -o $@ $(SSHOBJS) $(LDFLAGS) -lssh -lopenbsd-compat $(LIBS) $(GSSLIBS) $(CHANNELLIBS)
+
+azure_attestation_client$(EXEEXT): $(LIBCOMPAT) libssh.a $(SSHOBJS)
 	$(LD) -o $@ $(SSHOBJS) $(LDFLAGS) -lssh -lopenbsd-compat $(LIBS) $(GSSLIBS) $(CHANNELLIBS)
 
 sshd$(EXEEXT): libssh.a	$(LIBCOMPAT) $(SSHDOBJS)

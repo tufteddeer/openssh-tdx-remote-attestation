@@ -844,9 +844,11 @@ ra_ssh_token_request(int type, u_int32_t seq, struct ssh *ssh)
 {
 	printf("got RA SSH token request");
 	
+	char* token = "mytoken";
+
 	int r;
 	if ((r = sshpkt_start(ssh, RA_SSH_TOKEN_RESPONSE)) != 0 ||
-		(r = sshpkt_put_cstring(ssh, "mytoken")) != 0 || // TODO
+		(r = sshpkt_put_cstring(ssh, token)) != 0 || // TODO
 		(r = sshpkt_send(ssh)) != 0 ||
 		(r = ssh_packet_write_wait(ssh)) != 0)
 	{

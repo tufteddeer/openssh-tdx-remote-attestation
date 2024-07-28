@@ -70,6 +70,8 @@
 #include "authfd.h"
 #include "kex.h"
 
+#include "azure_attestation_client.h"
+
 struct sshkey *previous_host_key = NULL;
 
 static int matching_host_key_dns = 0;
@@ -1604,6 +1606,14 @@ ra_ssh_token_response(int type, u_int32_t seq, struct ssh *ssh) {
 	
 	printf("RA_SSH got token: %s\n", token);
 	
+	int validation_result = validate_azure_jwt(token);
+	
+	debug_f("azure validation result: %s\n", validation_result == AZURE_ATTESTATION_SUCCESS ? "success" : "failure");
+	
+	if (validation_result != AZURE_ATTESTATION_SUCCESS) {
+		printf("Remote attestation failed. Exiting\n");
+		exit(1);
+	}
 	ra_ssh_token_request_finished = 1;
     return r;
 }
