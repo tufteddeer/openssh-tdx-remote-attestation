@@ -836,7 +836,25 @@ set_process_rdomain(struct ssh *ssh, const char *name)
 #endif
 }
 
-sig_atomic_t ra_ssh_finished = 0;
+sig_atomic_t ra_ssh_service_request_finished = 0;
+sig_atomic_t ra_ssh_token_request_finished = 0;
+
+static int
+ra_ssh_token_request(int type, u_int32_t seq, struct ssh *ssh)
+{
+	printf("got RA SSH token request");
+	
+	int r;
+	if ((r = sshpkt_start(ssh, RA_SSH_TOKEN_RESPONSE)) != 0 ||
+		(r = sshpkt_put_cstring(ssh, "mytoken")) != 0 || // TODO
+		(r = sshpkt_send(ssh)) != 0 ||
+		(r = ssh_packet_write_wait(ssh)) != 0)
+	{
+		fatal("failed to send ra_ssh attestation token");
+	}
+	ra_ssh_token_request_finished = 1;
+	return r;
+}
 
 static int
 ra_ssh_service_request(int type, u_int32_t seq, struct ssh *ssh)
@@ -861,7 +879,7 @@ ra_ssh_service_request(int type, u_int32_t seq, struct ssh *ssh)
 		{
 			fatal("failed to accept ra_ssh attestation request");
 		}
-		ra_ssh_finished = 1;
+		ra_ssh_service_request_finished = 1;
 
 	} else {
 		fatal("unexpected request");
@@ -1327,10 +1345,16 @@ main(int ac, char **av)
 
 	ssh_dispatch_init(ssh, dispatch_protocol_error);
 	ssh_dispatch_set(ssh, SSH2_MSG_SERVICE_REQUEST, &ra_ssh_service_request);
-	ssh_dispatch_run_fatal(ssh, DISPATCH_BLOCK, &ra_ssh_finished);
+	ssh_dispatch_run_fatal(ssh, DISPATCH_BLOCK, &ra_ssh_service_request_finished);
 
 	debug_f("post RA-SSH dispatch registration");
 
+	debug_f("waiting for RA SSH token request");
+	ssh_dispatch_init(ssh, dispatch_protocol_error);
+	ssh_dispatch_set(ssh, RA_SSH_TOKEN_REQUEST, &ra_ssh_token_request);
+	ssh_dispatch_run_fatal(ssh, DISPATCH_BLOCK, &ra_ssh_token_request_finished);
+	
+	debug_f("post RA SSH token request");
 	/*
 	 * The unprivileged child now transfers the current keystate and exits.
 	 */

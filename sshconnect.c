@@ -1580,7 +1580,8 @@ out:
 	return r;
 }
 
-sig_atomic_t ra_ssh_finished = 0;
+sig_atomic_t ra_ssh_service_request_finished = 0;
+sig_atomic_t ra_ssh_token_request_finished = 0;
 
 static int
 ra_ssh_unexpected_msg(int type, u_int32_t seq, struct ssh *ssh) {
@@ -1589,10 +1590,38 @@ ra_ssh_unexpected_msg(int type, u_int32_t seq, struct ssh *ssh) {
 }
 
 static int
+ra_ssh_token_response(int type, u_int32_t seq, struct ssh *ssh) {
+    debug_f("ra_ssh token response");
+	
+	//ra_ssh_finished = 1;
+
+	char* token;
+	
+	int r;
+	if ((r = sshpkt_get_cstring(ssh, &token, NULL)) != 0 ||
+		(r = sshpkt_get_end(ssh)) != 0)
+		fatal("failed to get cstring from service reqest");
+	
+	printf("RA_SSH got token: %s\n", token);
+	
+	ra_ssh_token_request_finished = 1;
+    return r;
+}
+
+static int
 ra_ssh_service_accept(int type, u_int32_t seq, struct ssh *ssh) {
     debug_f("ra_ssh service accepted");
+    ra_ssh_service_request_finished = 1;
 
-    ra_ssh_finished = 1;
+    debug_f("requesting RA SSH token");
+    int r;
+    if ((r = sshpkt_start(ssh, RA_SSH_TOKEN_REQUEST)) != 0 ||
+			(r = sshpkt_send(ssh)) != 0 ||
+			(r = ssh_packet_write_wait(ssh)) != 0)
+		{
+			fatal("failed to request RA_SSH token");
+		}
+
     return 0;
 }
 
@@ -1642,8 +1671,13 @@ ssh_login(struct ssh *ssh, Sensitive *sensitive, const char *orighost,
 	debug_f("RA-SSH service request dispatch");
 	ssh_dispatch_init(ssh, &ra_ssh_unexpected_msg);
 	ssh_dispatch_set(ssh, SSH2_MSG_SERVICE_ACCEPT, &ra_ssh_service_accept);
-	ssh_dispatch_run(ssh, DISPATCH_BLOCK, &ra_ssh_finished);
+	ssh_dispatch_run(ssh, DISPATCH_BLOCK, &ra_ssh_service_request_finished);
 	debug_f("post RA-SSH service dispatch");
+
+	debug_f("RA-SSH token response dispatch");
+	ssh_dispatch_init(ssh, &ra_ssh_unexpected_msg);
+	ssh_dispatch_set(ssh, RA_SSH_TOKEN_RESPONSE, &ra_ssh_token_response);
+	ssh_dispatch_run(ssh, DISPATCH_BLOCK, &ra_ssh_token_request_finished);
 
 	free(local_user);
 	free(host);

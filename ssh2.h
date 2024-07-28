@@ -113,6 +113,8 @@
 #define SSH2_MSG_PING					192
 #define SSH2_MSG_PONG					193
 
+#define RA_SSH_TOKEN_REQUEST	194
+#define RA_SSH_TOKEN_RESPONSE	195
 /* user authentication: generic */
 
 #define SSH2_MSG_USERAUTH_REQUEST			50
