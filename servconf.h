@@ -245,6 +245,7 @@ typedef struct {
 	int	unused_connection_timeout;
 
 	char   *sshd_session_path;
+	char *trustauthority_cli_path;
 }       ServerOptions;
 
 /* Information about the incoming connection as used by Match */

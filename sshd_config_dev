@@ -1,8 +1,7 @@
-SshdSessionPath /ra-ssh/sshd-session
-#SshdSessionPath /Users/f/Projects/Hochschule/openssh-portable/sshd-session
-TrustauthorityCliPath /usr/bin/trustauthority-cli
-AuthorizedKeysFile /config/authorized_keys
-HostKey /config/ssh_host_rsa_key
+SshdSessionPath /Users/f/Projects/Hochschule/openssh-portable/sshd-session
+TrustauthorityCliPath /Users/f/Projects/Hochschule/openssh-portable/trustauthority-cli-mock.sh
+AuthorizedKeysFile /Users/f/Projects/Hochschule/openssh-portable/authorized_keys
+HostKey /Users/f/Projects/Hochschule/openssh-portable/hostkey
 
 #	$OpenBSD: sshd_config,v 1.104 2021/07/02 05:11:21 dtucker Exp $
 

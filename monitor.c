@@ -1726,7 +1726,7 @@ mm_answer_ra_ssh_token(struct ssh *ssh, int socket, struct sshbuf *m)
 {
 	debug_f("mm_answer_ra_ssh_token\n");
 
-	char *token = generate_azure_token();
+	char *token = generate_azure_token(options.trustauthority_cli_path);
 	struct sshbuf *response_buf = sshbuf_new();
 	sshbuf_put_cstring(response_buf, token);
 

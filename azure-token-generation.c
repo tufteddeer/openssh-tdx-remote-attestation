@@ -7,7 +7,6 @@
 #include <stdlib.h>
 
 #define AZURE_ATTESTATION_ENDPOINT "https://sharedeus2e.eus2e.attest.azure.net/attest/TdxVm?api-version=2023-04-01-preview"
-#define TRUSTAUTHORITY_CLI_PATH "/Users/f/Projects/Hochschule/openssh-portable/trustauthority-cli-mock.sh"
 
 const char* QUOTE_PREFIX = "Quote: ";
 const char* RUNTIME_DATA_PREFIX = "runtime_data: ";
@@ -62,14 +61,14 @@ const char* get_token_from_azure(const char* body) {
     return token;
 }
 
-const char* generate_azure_token() {
+const char* generate_azure_token(char *trustauthorityCliPath) {
 	printf("generating azure token\n");
 
 	char buffer[10500];
     FILE *pipe;
     int exit_status;
 
-    const char *command = TRUSTAUTHORITY_CLI_PATH;
+    const char *command = trustauthorityCliPath;
     printf("Running command %s\n", command);
 
     // Open the command for reading

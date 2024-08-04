@@ -559,7 +559,8 @@ typedef enum {
 	sExposeAuthInfo, sRDomain, sPubkeyAuthOptions, sSecurityKeyProvider,
 	sRequiredRSASize, sChannelTimeout, sUnusedConnectionTimeout,
 	sSshdSessionPath,
-	sDeprecated, sIgnore, sUnsupported
+	sDeprecated, sIgnore, sUnsupported,
+	sTrustauthorityCliPath
 } ServerOpCodes;
 
 #define SSHCFG_GLOBAL		0x01	/* allowed in main section of config */
@@ -724,6 +725,7 @@ static struct {
 	{ "channeltimeout", sChannelTimeout, SSHCFG_ALL },
 	{ "unusedconnectiontimeout", sUnusedConnectionTimeout, SSHCFG_ALL },
 	{ "sshdsessionpath", sSshdSessionPath, SSHCFG_GLOBAL },
+	{ "trustauthorityclipath", sTrustauthorityCliPath, SSHCFG_GLOBAL},
 	{ NULL, sBadOption, 0 }
 };
 
@@ -2620,6 +2622,10 @@ process_server_config_line_depth(ServerOptions *options, char *line,
 
 	case sSshdSessionPath:
 		charptr = &options->sshd_session_path;
+		goto parse_filename;
+		
+	case sTrustauthorityCliPath:
+		charptr = &options->trustauthority_cli_path;
 		goto parse_filename;
 
 	case sDeprecated:
