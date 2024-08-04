@@ -109,6 +109,7 @@
 #include "sk-api.h"
 #include "srclimit.h"
 #include "dh.h"
+#include "azure-token-generation.h"
 
 /* Re-exec fds */
 #define REEXEC_DEVCRYPTO_RESERVED_FD	(STDERR_FILENO + 1)
@@ -842,18 +843,36 @@ sig_atomic_t ra_ssh_token_request_finished = 0;
 static int
 ra_ssh_token_request(int type, u_int32_t seq, struct ssh *ssh)
 {
-	printf("got RA SSH token request");
+	printf("got RA SSH token request (printf)\n");
+	debug_f("got RA SSH token request");
 	
-	char* token = "mytoken";
+	struct sshbuf *m = sshbuf_new();
+	
+	mm_request_send(pmonitor->m_recvfd, MONITOR_REQ_RA_SSH_TOKEN, m);
+	debug_f("sent monitor request\n");
+	sshbuf_reset(m);
+	mm_request_receive_expect(pmonitor->m_recvfd, MONITOR_ANS_RA_SSH_TOKEN, m);
+	debug_f("received monitor response\n");
+	char *token = NULL;
+	size_t len;
+	int res = sshbuf_get_cstring(m, &token, &len);
+	debug_f("got cstring with len %u, res = %d\n", len, res);
+	
+	if (token == NULL) {
+		debug_f("Failed to generate ra_ssh attestation token\n");
+	}
+
+	debug_f("RA SSH token: %s\n", token);
 
 	int r;
 	if ((r = sshpkt_start(ssh, RA_SSH_TOKEN_RESPONSE)) != 0 ||
-		(r = sshpkt_put_cstring(ssh, token)) != 0 || // TODO
+		(r = sshpkt_put_cstring(ssh, token)) != 0 ||
 		(r = sshpkt_send(ssh)) != 0 ||
 		(r = ssh_packet_write_wait(ssh)) != 0)
 	{
-		fatal("failed to send ra_ssh attestation token");
+		fatal("failed to send ra_ssh attestation token\n");
 	}
+	//free(token);
 	ra_ssh_token_request_finished = 1;
 	return r;
 }
@@ -861,7 +880,7 @@ ra_ssh_token_request(int type, u_int32_t seq, struct ssh *ssh)
 static int
 ra_ssh_service_request(int type, u_int32_t seq, struct ssh *ssh)
 {
-
+	printf("ra_ssh_service_request (printf)\n");
 	debug_f("ra_ssh_service_request");
 
 	char *service = NULL;
@@ -1341,22 +1360,7 @@ main(int ac, char **av)
 	do_ssh2_kex(ssh);
 	do_authentication2(ssh);
 
-	debug_f("post do_authentication2");
-
-	debug_f("registering RA-SSH dispatcher");
-
-	ssh_dispatch_init(ssh, dispatch_protocol_error);
-	ssh_dispatch_set(ssh, SSH2_MSG_SERVICE_REQUEST, &ra_ssh_service_request);
-	ssh_dispatch_run_fatal(ssh, DISPATCH_BLOCK, &ra_ssh_service_request_finished);
-
-	debug_f("post RA-SSH dispatch registration");
-
-	debug_f("waiting for RA SSH token request");
-	ssh_dispatch_init(ssh, dispatch_protocol_error);
-	ssh_dispatch_set(ssh, RA_SSH_TOKEN_REQUEST, &ra_ssh_token_request);
-	ssh_dispatch_run_fatal(ssh, DISPATCH_BLOCK, &ra_ssh_token_request_finished);
 	
-	debug_f("post RA SSH token request");
 	/*
 	 * The unprivileged child now transfers the current keystate and exits.
 	 */
@@ -1413,6 +1417,24 @@ main(int ac, char **av)
 	/* Try to send all our hostkeys to the client */
 	notify_hostkeys(ssh);
 
+	debug_f("post do_authentication2");
+	debug3("test");
+	printf("registering RA-SSH dispatcher (printf)\n");
+	debug_f("registering RA-SSH dispatcher");
+
+	ssh_dispatch_init(ssh, dispatch_protocol_error);
+	ssh_dispatch_set(ssh, SSH2_MSG_SERVICE_REQUEST, &ra_ssh_service_request);
+	ssh_dispatch_run_fatal(ssh, DISPATCH_BLOCK, &ra_ssh_service_request_finished);
+
+	debug_f("post RA-SSH dispatch registration");
+
+	debug_f("waiting for RA SSH token request");
+	ssh_dispatch_init(ssh, dispatch_protocol_error);
+	ssh_dispatch_set(ssh, RA_SSH_TOKEN_REQUEST, &ra_ssh_token_request);
+	ssh_dispatch_run_fatal(ssh, DISPATCH_BLOCK, &ra_ssh_token_request_finished);
+	
+	debug_f("post RA SSH token request");
+	
 	/* Start session. */
 	do_authenticated(ssh, authctxt);
 

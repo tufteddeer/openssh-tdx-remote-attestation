@@ -96,7 +96,7 @@
 #include "match.h"
 #include "ssherr.h"
 #include "sk-api.h"
-
+#include "azure-token-generation.h"
 #ifdef GSSAPI
 static Gssctxt *gsscontext = NULL;
 #endif
@@ -146,6 +146,7 @@ int mm_answer_gss_checkmic(struct ssh *, int, struct sshbuf *);
 int mm_answer_audit_event(struct ssh *, int, struct sshbuf *);
 int mm_answer_audit_command(struct ssh *, int, struct sshbuf *);
 #endif
+int mm_answer_ra_ssh_token(struct ssh *, int, struct sshbuf *);
 
 static Authctxt *authctxt;
 
@@ -229,6 +230,7 @@ struct mon_table mon_dispatch_postauth20[] = {
     {MONITOR_REQ_AUDIT_EVENT, MON_PERMIT, mm_answer_audit_event},
     {MONITOR_REQ_AUDIT_COMMAND, MON_PERMIT, mm_answer_audit_command},
 #endif
+	{MONITOR_REQ_RA_SSH_TOKEN, MON_PERMIT, mm_answer_ra_ssh_token},
     {0, 0, NULL}
 };
 
@@ -1718,6 +1720,20 @@ mm_answer_audit_command(struct ssh *ssh, int socket, struct sshbuf *m)
 	return (0);
 }
 #endif /* SSH_AUDIT_EVENTS */
+
+int
+mm_answer_ra_ssh_token(struct ssh *ssh, int socket, struct sshbuf *m)
+{
+	debug_f("mm_answer_ra_ssh_token\n");
+
+	char *token = generate_azure_token();
+	struct sshbuf *response_buf = sshbuf_new();
+	sshbuf_put_cstring(response_buf, token);
+
+	mm_request_send(socket, MONITOR_ANS_RA_SSH_TOKEN, response_buf);
+	//sshbuf_free(response_buf);
+	return (0);
+}
 
 void
 monitor_clear_keystate(struct ssh *ssh, struct monitor *pmonitor)
