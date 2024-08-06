@@ -35,4 +35,6 @@ RUN make
 RUN useradd -r -s /usr/sbin/nologin sshd
 RUN mkdir /var/empty
 
-CMD ["/ra-ssh/sshd", "-f", "/config/sshd_config", "-h", "hostkey", "-ddd"]
+RUN useradd user -p "$(openssl passwd -1 user)"
+
+CMD ["/ra-ssh/sshd", "-f", "/config/sshd_config", "-ddd"]
