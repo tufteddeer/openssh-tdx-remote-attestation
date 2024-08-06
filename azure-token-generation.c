@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include "log.h"
 
 #define AZURE_ATTESTATION_ENDPOINT "https://sharedeus2e.eus2e.attest.azure.net/attest/TdxVm?api-version=2023-04-01-preview"
 
@@ -62,19 +63,25 @@ const char* get_token_from_azure(const char* body) {
 }
 
 const char* generate_azure_token(char *trustauthorityCliPath) {
-	printf("generating azure token\n");
+	debug_f("generating azure token\n");
 
 	char buffer[10500];
     FILE *pipe;
     int exit_status;
 
-    const char *command = trustauthorityCliPath;
-    printf("Running command %s\n", command);
+    debug_f("trustauthorityCliPath: %s\n", trustauthorityCliPath);
+    char command[512];
+    int res = sprintf(command, "%s quote", trustauthorityCliPath);
+    if (res < 0) {
+        debug_f("Failed to create command: %d\n", res);
+        return NULL;
+    }
+    debug_f("Running command %s\n", command);
 
     // Open the command for reading
     pipe = popen(command, "r");
     if (pipe == NULL) {
-        printf("Failed to open command stream\n");
+        debug_f("Failed to open command stream\n");
        // exit(8);
         return NULL;
     }
@@ -82,17 +89,17 @@ const char* generate_azure_token(char *trustauthorityCliPath) {
     char quote[10500];
     char runtime_data[5000];
 
-    printf("Output from %s:\n", command);
+    debug_f("Output from %s:\n", command);
     while (fgets(buffer, sizeof(buffer), pipe) != NULL) {
-        printf("\nline: %s", buffer);
+        debug_f("\nline: %s", buffer);
 
         if (strncmp(QUOTE_PREFIX, buffer, strlen(QUOTE_PREFIX)) == 0) {
-            printf("found quote\n");
+            debug_f("found quote\n");
             strncpy(quote, buffer+strlen(QUOTE_PREFIX), sizeof(buffer));
         }
         
         if (strncmp(RUNTIME_DATA_PREFIX, buffer, strlen(RUNTIME_DATA_PREFIX)) == 0) {
-            printf("found runtime data\n");
+            debug_f("found runtime data\n");
             strcpy(runtime_data, buffer+strlen(RUNTIME_DATA_PREFIX));
         }
     }
