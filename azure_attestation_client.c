@@ -8,6 +8,9 @@
 #include <openssl/x509.h>
 #include <openssl/bio.h>
 #include <openssl/pem.h>
+#include "digest.h"
+#include "log.h"
+#include <ctype.h>
 
 #include <azure_attestation_client.h>
 #include "curl-util.h"
@@ -164,8 +167,69 @@ int azure_key_provider(const jwt_t* jwt, jwt_key_t* key_t) {
     return 0;
 }
 
-int validate_azure_jwt(const char* jwt_str) {
- jwt_t *jwt = NULL;
+// check if the expected nonce matches the received nonce
+// the expected nonce is raw data
+// the received nonce is upper case SHA5125 and should be equal to sha512(expected)
+int validate_nonce(const char *expected, const char *received) {
+	size_t len = ssh_digest_bytes(SSH_DIGEST_SHA512);
+    u_char *hash = malloc(len);
+    ssh_digest_memory(SSH_DIGEST_SHA512, expected, strlen(expected), hash, len);
+
+    // Convert the hash to a hex string for comparison
+    char hex_output[len * 2 + 1];
+    for (size_t i = 0; i < len; i++) {
+        snprintf(hex_output + 2 * i, 3, "%02X", hash[i]);
+    }
+    hex_output[len * 2] = '\0';
+    
+    debug_f("expected nonce: %s", hex_output);
+    debug_f("received nonce: %s", received);
+
+    if (strcmp(hex_output, received) == 0) {
+        return AZURE_ATTESTATION_SUCCESS;
+    } else {
+    	return AZURE_ATTESTATION_ERROR;
+    }
+}
+
+const char* get_user_data_from_json(jwt_t *jwt) {
+	json_t *json_obj;
+    json_error_t error;
+    
+    const char *ms_runtime_str = jwt_get_grants_json(jwt, "x-ms-runtime");
+    if (!ms_runtime_str) {
+    	debug_f("\"x-ms-runtime\" field not found");
+     	return NULL;
+    }
+    debug_f("ms_runtime str: %s", ms_runtime_str);
+
+    json_obj = json_loads(ms_runtime_str, 0, &error);
+    if (!json_obj) {
+        debug_f("Error parsing JSON: %s\n", error.text);
+        return NULL;
+    }
+    
+    json_t *user_data = json_object_get(json_obj, "user-data");
+    if (!user_data) {
+    	debug_f("\"user-data\" field not found\n");
+        json_decref(json_obj);
+        return NULL;
+    }
+    
+    const char *user_data_str = json_string_value(user_data);
+    if (!user_data_str) {
+        debug_f("\"user-data\" is not a string value\n");
+    }
+
+    const char *result = malloc(strlen(user_data_str));
+    strcpy(result, user_data_str);
+    debug_f("user data: %s", user_data_str);
+    json_decref(json_obj);
+    
+    return result;
+}
+int validate_azure_jwt(const char *jwt_str, const char *nonce) {
+	jwt_t *jwt = NULL;
 
     int ret = jwt_decode_2(&jwt, jwt_str, azure_key_provider);
     if (ret != 0) {
@@ -173,14 +237,25 @@ int validate_azure_jwt(const char* jwt_str) {
         fprintf(stderr, "Error decoding JWT: %s\n", ex);
         return 1;
     }
-    // Print the payload
+
     const char *eatProfile = jwt_get_grant(jwt, "eat_profile");
 
     printf("eat_profile: %s\n", eatProfile ? eatProfile : "not found");
 
     int res = strcmp(eatProfile, "https://aka.ms/maa-eat-profile-tdxvm") == 0 ? AZURE_ATTESTATION_SUCCESS : AZURE_ATTESTATION_ERROR;
 
-    // Free the JWT object
+    if (res == AZURE_ATTESTATION_SUCCESS) {
+    	
+    	const char* user_data_str = get_user_data_from_json(jwt);
+        if (!user_data_str) {
+        	debug_f("failed to get user_data from jwt");
+			return AZURE_ATTESTATION_ERROR;
+		}
+        res = validate_nonce(nonce, user_data_str);
+        
+        free(user_data_str);
+    }
+
     jwt_free(jwt);
     
     return res;

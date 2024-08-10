@@ -1726,7 +1726,12 @@ mm_answer_ra_ssh_token(struct ssh *ssh, int socket, struct sshbuf *m)
 {
 	debug_f("mm_answer_ra_ssh_token\n");
 
-	const char *token = generate_azure_token(options.trustauthority_cli_path);
+	char* nonce;
+	int r = sshbuf_get_cstring(m, &nonce, NULL);
+	if (r != 0) {
+		fatal_fr(r, "failed to get nonce");
+	}
+	const char *token = generate_azure_token(options.trustauthority_cli_path, nonce);
 	struct sshbuf *response_buf = sshbuf_new();
 	sshbuf_put_cstring(response_buf, token);
 

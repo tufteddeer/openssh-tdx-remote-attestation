@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "log.h"
+#include "sshbuf.h"
 
 #define AZURE_ATTESTATION_ENDPOINT "https://sharedeus2e.eus2e.attest.azure.net/attest/TdxVm?api-version=2023-04-01-preview"
 
@@ -62,16 +63,28 @@ const char* get_token_from_azure(const char* body) {
     return token;
 }
 
-const char* generate_azure_token(char *trustauthorityCliPath) {
-	debug_f("generating azure token\n");
+const char* generate_azure_token(char *trustauthorityCliPath, char *nonce) {
+	debug_f("generating azure token with nonce %s\n", nonce);
 
+	struct sshbuf *nonce_buf = sshbuf_new();
+	// put nonce as raw bytes. if added as cstring, the buffer includes a 4 byte prefix that would be encoded too
+	int ret = sshbuf_put(nonce_buf, nonce, strlen(nonce));
+	if (ret != 0) {
+		debug_f("Failed to put nonce into buffer: %d\n", ret);
+		return NULL;
+	}
+
+	char *base64_nonce = sshbuf_dtob64_string(nonce_buf, 0);
+
+	debug_f("nonce base64: %s", base64_nonce);
+	
 	char buffer[10500];
     FILE *pipe;
     int exit_status;
 
     debug_f("trustauthorityCliPath: %s\n", trustauthorityCliPath);
     char command[512];
-    int res = sprintf(command, "%s quote", trustauthorityCliPath);
+    int res = sprintf(command, "%s quote -u %s", trustauthorityCliPath, base64_nonce);
     if (res < 0) {
         debug_f("Failed to create command: %d\n", res);
         return NULL;

@@ -1606,7 +1606,7 @@ ra_ssh_token_response(int type, u_int32_t seq, struct ssh *ssh) {
 	
 	printf("RA_SSH got token: %s\n", token);
 	
-	int validation_result = validate_azure_jwt(token);
+	int validation_result = validate_azure_jwt(token, "mynonce"); // TODO: get nonce from ssh
 	
 	debug_f("azure validation result: %s\n", validation_result == AZURE_ATTESTATION_SUCCESS ? "success" : "failure");
 	
@@ -1626,6 +1626,7 @@ ra_ssh_service_accept(int type, u_int32_t seq, struct ssh *ssh) {
     debug_f("requesting RA SSH token");
     int r;
     if ((r = sshpkt_start(ssh, RA_SSH_TOKEN_REQUEST)) != 0 ||
+    		(r = sshpkt_put_cstring(ssh, "mynonce")) != 0 || // TODO: store in ssh
 			(r = sshpkt_send(ssh)) != 0 ||
 			(r = ssh_packet_write_wait(ssh)) != 0)
 		{

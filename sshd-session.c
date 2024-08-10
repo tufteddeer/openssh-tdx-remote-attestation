@@ -845,8 +845,19 @@ ra_ssh_token_request(int type, u_int32_t seq, struct ssh *ssh)
 {
 	printf("got RA SSH token request (printf)\n");
 	debug_f("got RA SSH token request");
+
+	char* nonce;
+	size_t nonce_len;
+	int ret = sshpkt_get_cstring(ssh, &nonce, &nonce_len);
+	if (ret != 0) {
+		debug_f("Failed to read nonce");
+		exit(1);
+	};
+
+	debug_f("got nonce %s (len=%zu)\n", nonce, nonce_len);
 	
 	struct sshbuf *m = sshbuf_new();
+	sshbuf_put_cstring(m, nonce);
 	
 	mm_request_send(pmonitor->m_recvfd, MONITOR_REQ_RA_SSH_TOKEN, m);
 	debug_f("sent monitor request\n");
