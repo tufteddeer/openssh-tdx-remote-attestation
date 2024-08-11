@@ -1631,7 +1631,11 @@ ra_ssh_service_accept(int type, u_int32_t seq, struct ssh *ssh) {
     char nonce[RA_SSH_NONCE_SIZE];
     arc4random_buf(nonce, RA_SSH_NONCE_SIZE);
 
-    ssh->ra_ssh_nonce = nonce;
+    // base64 encoding is not strictly necessary, but makes debug printing easier and ensures that it contains no \0
+    // so it can be used like a cstring. the nonce is used as-is and not decoded again.
+    struct sshbuf *b = sshbuf_new();
+    sshbuf_put(b, nonce, RA_SSH_NONCE_SIZE);
+    ssh->ra_ssh_nonce = sshbuf_dtob64_string(b, 0);
 
     debug_f("requesting RA SSH token with nonce: %s", ssh->ra_ssh_nonce);
     int r;
