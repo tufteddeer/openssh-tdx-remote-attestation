@@ -86,6 +86,8 @@ struct ssh {
 
 	/* APP data */
 	void *app_data;
+
+	char *ra_ssh_nonce;
 };
 
 typedef int (ssh_packet_hook_fn)(struct ssh *, struct sshbuf *,

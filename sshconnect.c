@@ -71,6 +71,7 @@
 #include "kex.h"
 
 #include "azure_attestation_client.h"
+#include "ra_ssh.h"
 
 struct sshkey *previous_host_key = NULL;
 
@@ -1606,7 +1607,11 @@ ra_ssh_token_response(int type, u_int32_t seq, struct ssh *ssh) {
 	
 	printf("RA_SSH got token: %s\n", token);
 	
-	int validation_result = validate_azure_jwt(token, "mynonce"); // TODO: get nonce from ssh
+	if (ssh->ra_ssh_nonce == NULL) {
+		printf("RA_SSH nonce is NULL\n");
+		exit(1);
+	}
+	int validation_result = validate_azure_jwt(token, ssh->ra_ssh_nonce);
 	
 	debug_f("azure validation result: %s\n", validation_result == AZURE_ATTESTATION_SUCCESS ? "success" : "failure");
 	
@@ -1623,10 +1628,15 @@ ra_ssh_service_accept(int type, u_int32_t seq, struct ssh *ssh) {
     debug_f("ra_ssh service accepted");
     ra_ssh_service_request_finished = 1;
 
-    debug_f("requesting RA SSH token");
+    char nonce[RA_SSH_NONCE_SIZE];
+    arc4random_buf(nonce, RA_SSH_NONCE_SIZE);
+
+    ssh->ra_ssh_nonce = nonce;
+
+    debug_f("requesting RA SSH token with nonce: %s", ssh->ra_ssh_nonce);
     int r;
     if ((r = sshpkt_start(ssh, RA_SSH_TOKEN_REQUEST)) != 0 ||
-    		(r = sshpkt_put_cstring(ssh, "mynonce")) != 0 || // TODO: store in ssh
+			(r = sshpkt_put_cstring(ssh, ssh->ra_ssh_nonce)) != 0 ||
 			(r = sshpkt_send(ssh)) != 0 ||
 			(r = ssh_packet_write_wait(ssh)) != 0)
 		{
