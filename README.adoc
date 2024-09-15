@@ -4,6 +4,12 @@ This is the readme for remote attestation SSH. You can find the original `Portab
 
 https://github.com/tufteddeer/openssh-tdx-remote-attestation/compare/master...ra-ssh[See here] for a detailed list of changes.
 
+== Demo
+
+This is a recording of the SSH server accepting a client connection and performing remote attestation.
+
+image::https://asciinema.org/a/W6dEe6K7qD5o9AqFw7wBMEkIC.svg["asciicast", link="https://asciinema.org/a/W6dEe6K7qD5o9AqFw7wBMEkIC"]
+
 == Development
 
 The following new dependencies are required to build the project:
