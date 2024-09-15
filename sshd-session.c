@@ -843,7 +843,6 @@ sig_atomic_t ra_ssh_token_request_finished = 0;
 static int
 ra_ssh_token_request(int type, u_int32_t seq, struct ssh *ssh)
 {
-	printf("got RA SSH token request (printf)\n");
 	debug_f("got RA SSH token request");
 
 	char* nonce;
@@ -891,7 +890,6 @@ ra_ssh_token_request(int type, u_int32_t seq, struct ssh *ssh)
 static int
 ra_ssh_service_request(int type, u_int32_t seq, struct ssh *ssh)
 {
-	printf("ra_ssh_service_request (printf)\n");
 	debug_f("ra_ssh_service_request");
 
 	char *service = NULL;
@@ -1429,8 +1427,6 @@ main(int ac, char **av)
 	notify_hostkeys(ssh);
 
 	debug_f("post do_authentication2");
-	debug3("test");
-	printf("registering RA-SSH dispatcher (printf)\n");
 	debug_f("registering RA-SSH dispatcher");
 
 	ssh_dispatch_init(ssh, dispatch_protocol_error);
