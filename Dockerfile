@@ -38,4 +38,4 @@ RUN mkdir /var/empty
 # demo user:user
 RUN useradd user -m -p "$(openssl passwd -1 user)"
 
-CMD ["/ra-ssh/sshd", "-f", "/config/sshd_config", "-ddd"]
+CMD ["/ra-ssh/sshd", "-f", "/config/sshd_config", "-d"]

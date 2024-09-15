@@ -97,7 +97,7 @@ In another shell session, on the same VM:
 - Start the `ssh` client:
 
 ```sh
-sudo docker exec -it ra-ssh ./ssh -F /config/ssh_config user@localhost -vvv
+sudo docker exec -it ra-ssh ./ssh -F /config/ssh_config user@localhost -v
 ```
 
 When asked, type "yes" to accept the host fingerprint.
@@ -108,6 +108,10 @@ After attestaton is performed (which takes a few seconds), the connection will b
 Note that `sh` prompt is just a single `$` and the shell session may be interlaced with the debug logs of the `ssh` client.
 
 Since `sshd` is running in debug mode to be able to see the logs in the terminal, it will exit when the connection is terminated.
+
+
+To get more context or investigate failures, use `ssh` with `-vvv` and `sshd` with `-ddd` (in the `Dockerfile`) flags to increase logging verbosity.
+All logging for remote attestation uses debug level 1.
 
 === Testing without a confidential VM
 
