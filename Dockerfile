@@ -15,7 +15,7 @@ RUN apt-get install -y \
 	cmake \
 	g++
 
-RUN curl -sL https://raw.githubusercontent.com/intel/trustauthority-client-for-go/main/release/install-tdx-cli-azure.sh | bash -
+RUN curl -sL https://raw.githubusercontent.com/intel/trustauthority-client-for-go/main/release/install-tdx-cli-azure.sh | CLI_VERSION=v1.4.0 bash -
 
 # we need a newer version of libjwt than what is available in ubuntu 22
 RUN git clone https://github.com/benmcollins/libjwt.git

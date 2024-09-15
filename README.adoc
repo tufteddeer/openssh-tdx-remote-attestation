@@ -60,7 +60,7 @@ To simplify testing, there is a Docker image available containing
 - dependencies needed to build OpenSSH
 - new dependencies needed for remote attestation (libcurl, jansson, libjwt)
 - required build artifacts (`ssh`, `sshd`, `ssh-session`)
-- Intel trustauthority-cli and dependencies
+- Intel trustauthority-cli (pinned to version 1.4.0) and dependencies
 - a demo user account ("user" with password "user")
 
 Running the image will start the ssh server.
