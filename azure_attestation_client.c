@@ -239,10 +239,25 @@ int validate_azure_jwt(const char *jwt_str, const char *nonce) {
     }
 
     const char *eatProfile = jwt_get_grant(jwt, "eat_profile");
+    const char *msAttestationType = jwt_get_grant(jwt, "x-ms-attestation-type");
+    const char *msComplianceStatus = jwt_get_grant(jwt, "x-ms-compliance-status");
 
-    printf("eat_profile: %s\n", eatProfile ? eatProfile : "not found");
+    int res = AZURE_ATTESTATION_SUCCESS;
 
-    int res = strcmp(eatProfile, "https://aka.ms/maa-eat-profile-tdxvm") == 0 ? AZURE_ATTESTATION_SUCCESS : AZURE_ATTESTATION_ERROR;
+    if (strcmp(eatProfile, "https://aka.ms/maa-eat-profile-tdxvm") != 0) {
+        debug_f("attestation failure: eat_profile (expected: https://aka.ms/maa-eat-profile-tdxvm, actual: %s)", eatProfile);
+        res = AZURE_ATTESTATION_ERROR;
+    } else if (strcmp(msAttestationType, "tdxvm") != 0) {
+        debug_f("attestation failure: x-ms-attestation-type (expected: tdxvm, actual: %s)", msAttestationType);
+        res = AZURE_ATTESTATION_ERROR;
+    }  else if (strcmp(msComplianceStatus, "azure-compliant-cvm") != 0) {
+        debug_f("attestation failure: x-ms-compliance-status (expected: azure-compliant-cvm, actual: %s)", msComplianceStatus);
+        res = AZURE_ATTESTATION_ERROR;
+    }
+
+    debug_f("valid eat_profile: %s", eatProfile);
+    debug_f("valid x-ms-compliance-status: %s", msComplianceStatus);
+    debug_f("valid x-ms-attestation-type: %s", msAttestationType);
 
     if (res == AZURE_ATTESTATION_SUCCESS) {
     	
