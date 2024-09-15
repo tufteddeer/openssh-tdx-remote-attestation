@@ -2,6 +2,8 @@
 
 This is the readme for remote attestation SSH. You can find the original `Portable OpenSSH` readme in `Readme_openssh.md`.
 
+https://github.com/tufteddeer/openssh-tdx-remote-attestation/compare/master...ra-ssh[See here] for a detailed list of changes.
+
 == Development
 
 The following new dependencies are required to build the project:
@@ -32,6 +34,8 @@ Further modifications to the source code are required to bypass some checks (usi
 Use the `SSHD_SESSION` environment variable or the `SshdSessionPath` config item to set the path (see the `sshd_config_dev` file)
 
 You also need a ssh hostkey (see <<Testing>>) named `hostkey`
+
+Note: Due to privilege separation, running on Linux needs some additional setup (see `Dockerfile`)
 
 ```sh
 sudo $(pwd)/sshd -f sshd_config_dev -ddd
