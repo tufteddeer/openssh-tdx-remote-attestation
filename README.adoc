@@ -1,0 +1,122 @@
+= Remote attestation SSH
+
+This is the readme for remote attestation SSH. You can find the original `Portable OpenSSH` readme in `Readme_openssh.md`.
+
+== Development
+
+The following new dependencies are required to build the project:
+
+- libcurl for HTTP requests
+- jansson for JSON parsing
+- libjwt for JWT parsing and validation
+
+Build instructions and original dependencies for `OpenSSH` can be found in the original `Readme_openssh.md` file.
+The `Dockerfile` contains instructions specific to Ubuntu 22.04.
+
+```sh
+autoreconf
+./configure
+make
+```
+
+=== Running
+
+This part focuses on the development.
+If you are interested in testing the project, see <<Testing>>.
+
+See <<Testing without a confidential VM>> for some workarounds to run on non-TDX hardware.
+Further modifications to the source code are required to bypass some checks (using a hardcoded nonce or disabling verification).
+
+
+`ssh` needs an absolute path to the `sshd-session` binary (an artifact of this project).
+Use the `SSHD_SESSION` environment variable or the `SshdSessionPath` config item to set the path (see the `sshd_config_dev` file)
+
+You also need a ssh hostkey (see <<Testing>>) named `hostkey`
+
+```sh
+sudo $(pwd)/sshd -f sshd_config_dev -ddd
+```
+
+```sh
+./ssh test@localhost -vvv
+```
+
+Note: In my experience, password based authentication does not work on MacOS, public key does.
+
+
+== Testing
+
+To test the project, you need a confidential VM using Intel TDX on Microsoft Azure.
+The following configuration was used during development:
+
+- Security Type: Confidential virtual machines
+- Image: Ubuntu Server 22.04 LTS (Confidential VM) x64 Gen2
+- Size: Standard_DC2es_v5footnote:[https://learn.microsoft.com/en-us/azure/virtual-machines/sizes/general-purpose/dcesv5-series?tabs=sizebasic]
+
+
+To simplify testing, there is a Docker image available containing
+
+- Ubuntu 22.04, which is required for the Intel trustauthority-cli
+- dependencies needed to build OpenSSH
+- new dependencies needed for remote attestation (libcurl, jansson, libjwt)
+- required build artifacts (`ssh`, `sshd`, `ssh-session`)
+- Intel trustauthority-cli and dependencies
+- a demo user account ("user" with password "user")
+
+Running the image will start the ssh server.
+
+The following requirements must be povided for the container to run:
+
+- `/dev/tpmrm0` device from the host (the confidential VM)
+- `sshd_config` and `ssh_config` files
+- `ssh_host_rsa_key` and `ssh_host_rsa_key.pub` files
+
+=== Step by step guide
+
+The following steps assume you are inside the confidential VM.
+
+- https://docs.docker.com/engine/install/ubuntu/#install-using-the-repository[Install Docker]
+- clone this repository or copy the config files manually
+- `cd` into the repository
+- Create a hostkey for the ssh server. When prompted for a password, press enter to create a key without a password.
+
+```sh
+ssh-keygen -f ssh_host_rsa_key
+```
+
+- Start the container with the following command:
+
+```sh
+sudo docker run --rm --device /dev/tpmrm0 -v ./:/config -it --name ra-ssh ghcr.io/tufteddeer/openssh-tdx-remote-attestation:ra-ssh
+```
+
+This will mount the tpm device and the configuration files into the container and start the ssh server.
+
+In another shell session, on the same VM:
+
+- Start the `ssh` client:
+
+```sh
+sudo docker exec -it ra-ssh ./ssh -F /config/ssh_config user@localhost -vvv
+```
+
+When asked, type "yes" to accept the host fingerprint.
+Use "user" as the password for the "user" account.
+
+After attestaton is performed (which takes a few seconds), the connection will be established and you should be in a shell session as "user".
+
+Note that `sh` prompt is just a single `$` and the shell session may be interlaced with the debug logs of the `ssh` client.
+
+Since `sshd` is running in debug mode to be able to see the logs in the terminal, it will exit when the connection is terminated.
+
+=== Testing without a confidential VM
+
+To test the project without a VM capable of Azure TDX attestation, you can modify the `sshd_config` file to use the `trustauthority-cli-mock.sh` script which will just echo a hardcoded quote.
+Note that this quote may be outdated or use keys that are not valid or available anymore and that the nonce verification will fail, so this method is mainly useful during development or to simulate a failed attestation attempt.
+
+```
+# in docker
+TrustauthorityCliPath /config/trustauthority-cli-mock.sh
+# general
+TrustauthorityCliPath /path/to/trustauthority-cli-mock.sh
+```
