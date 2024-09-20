@@ -19,7 +19,8 @@ Practical applications especially profiting from remote attestation before estab
 
 This is the readme for remote attestation in SSH. You can find the original `Portable OpenSSH` readme in `Readme_openssh.md`.
 
-https://github.com/tufteddeer/openssh-tdx-remote-attestation/compare/master...ra-ssh[See the detailed list of changes here.]
+// \ needed because asciidoctor think ... is an ellipsis and breaks the link
+https://github.com/tufteddeer/openssh-tdx-remote-attestation/compare/master\...ra-ssh[See the detailed list of changes here.]
 
 == Demo
 
