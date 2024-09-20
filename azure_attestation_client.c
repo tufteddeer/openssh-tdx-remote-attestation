@@ -15,7 +15,7 @@
 #include <azure_attestation_client.h>
 #include "curl-util.h"
 
-const char* fetch_azure_cert(const char *key_id) {
+const char* fetch_azure_cert(const char *url, const char *key_id) {
 
     struct MemoryStruct chunk;
 
@@ -32,7 +32,7 @@ const char* fetch_azure_cert(const char *key_id) {
         return NULL;
     }
     
-    curl_easy_setopt(curl, CURLOPT_URL, "https://sharedeus2e.eus2e.attest.azure.net/certs");
+    curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
     
@@ -143,6 +143,18 @@ char* public_key_from_x509(const char *x509_cert) {
     return pem_data;
 }
 
+// https://stackoverflow.com/questions/744766/how-to-compare-ends-of-strings-in-c
+int ends_with(const char *str, const char *suffix)
+{
+    if (!str || !suffix)
+        return 0;
+    size_t lenstr = strlen(str);
+    size_t lensuffix = strlen(suffix);
+    if (lensuffix >  lenstr)
+        return 0;
+    return strncmp(str + lenstr - lensuffix, suffix, lensuffix) == 0;
+}
+
 int azure_key_provider(const jwt_t* jwt, jwt_key_t* key_t) {
     
     const char* algorithm = jwt_alg_str(jwt_get_alg(jwt));
@@ -150,8 +162,21 @@ int azure_key_provider(const jwt_t* jwt, jwt_key_t* key_t) {
     
     
     const char* key_id = jwt_get_header(jwt, "kid");
+    const char* url = jwt_get_header(jwt, "jku");
+    
+    debug_f("got X509 certificates url: %s", url);
+
+    const char *expected_cert_url_suffix = "azure.net/certs";
+    
+    if (ends_with(url, expected_cert_url_suffix)) {
+        debug_f("certificate url is from azure");
+    } else {
+        debug_f("certificate url may not be from azure. aborting\n", expected_cert_url_suffix);
+        return -1;
+    }
+
          
-    const char* x509_body = fetch_azure_cert(key_id);
+    const char* x509_body = fetch_azure_cert(url, key_id);
                     
     const char* pem_header = "-----BEGIN CERTIFICATE-----\n";
     const char* pem_footer = "\n-----END CERTIFICATE-----\n\0";
