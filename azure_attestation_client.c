@@ -73,6 +73,7 @@ const char* fetch_azure_cert(const char *key_id) {
         }
     }
     
+    char *x509_body_buff = strdup(x509_body);
     curl_easy_cleanup(curl);
     curl_global_cleanup();
     free(chunk.memory);
@@ -81,7 +82,7 @@ const char* fetch_azure_cert(const char *key_id) {
     if (x509_body == NULL) {
         printf("No key found with id %s\n", key_id);
     }
-    return x509_body;
+    return x509_body_buff;
 }
 
 char* public_key_from_x509(const char *x509_cert) {
@@ -153,7 +154,8 @@ int azure_key_provider(const jwt_t* jwt, jwt_key_t* key_t) {
     const char* x509_body = fetch_azure_cert(key_id);
                     
     const char* pem_header = "-----BEGIN CERTIFICATE-----\n";
-    const char* pem_footer = "\n-----END CERTIFICATE-----\n";
+    const char* pem_footer = "\n-----END CERTIFICATE-----\n\0";
+    
     char x509_with_pem_deco[strlen(x509_body) + strlen(pem_header) + strlen(pem_footer)];
                     
     sprintf(x509_with_pem_deco, "%s%s%s", pem_header, x509_body, pem_footer);
@@ -164,6 +166,7 @@ int azure_key_provider(const jwt_t* jwt, jwt_key_t* key_t) {
     key_t->jwt_key = public_key_pem;
     key_t->jwt_key_len = strlen(public_key_pem);
     
+    free(x509_body);
     return 0;
 }
 
