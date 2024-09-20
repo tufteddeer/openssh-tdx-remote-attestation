@@ -22,6 +22,18 @@ This is the readme for remote attestation in SSH. You can find the original `Por
 // \ needed because asciidoctor think ... is an ellipsis and breaks the link
 https://github.com/tufteddeer/openssh-tdx-remote-attestation/compare/master\...ra-ssh[See the detailed list of changes here.]
 
+== How it works
+
+The implementation is based on a _challenge-response protocol_.
+
+The client starts the connection as usual.
+After the keys are exchanged and the user is authenticated, it sends a message to the server, requesting the attestation information together with a nonce (_challenge_).
+The server create an Intel TDX report that contains the nonce and information about the Trusted Domain and uses an Azure Service to generate a JWT token from it.
+The token is send to the client (_response_).
+
+As relying party, the client validates the signature on the JWT and veryfies the claims and the nonce.
+If the attestation is successful, the SSH connection continues, otherwise the client terminates the connection.
+
 == Demo
 
 This is a recording of the SSH server accepting a client connection and performing remote attestation.
@@ -136,6 +148,8 @@ Use "user" as the password for the "user" account.
 After attestation is performed (which my take a few seconds), the connection will be established and you should be in a shell session as "user".
 
 Note that `sh` prompt is just a single `$` and the shell session may be interlaced with the debug logs of the `ssh` client.
+
+Type `exit` to quit the session.
 
 Since `sshd` is running in debug mode to be able to see the logs in the terminal, it will exit when the connection is terminated.
 
