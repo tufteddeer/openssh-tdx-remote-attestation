@@ -1,14 +1,33 @@
 = Remote attestation SSH
 
-This is the readme for remote attestation SSH. You can find the original `Portable OpenSSH` readme in `Readme_openssh.md`.
+This project adds Intel TDX remote attestation to https://github.com/openssh/openssh-portable[OpenSSH] using Microsoft Azure Attestation.
 
-https://github.com/tufteddeer/openssh-tdx-remote-attestation/compare/master...ra-ssh[See here] for a detailed list of changes.
+Intel TDX is a Confidential Computing technology that provides hardware-based memory protection for virtual machines, so called _Trusted Domains_.
+By performing remote attestation, the existence and integrity of the Trusted Domain can be proven to a remote party.
+
+Using a custom SSH extension, the client and server perform a challenge-response protocol where the server proves it is running in a Trusted Domain.
+The client will verify the claims and only connect if the attestation is successful.
+This ensures that the SSH client only connects to servers running in a trusted environment, verified by remote attestation.
+
+SSH is widely used in existing software for securely connecting machines via network.
+Practical applications especially profiting from remote attestation before establishing an SSH connection include:
+
+- limiting the deployment of software to trusted environments
+- transfering of backups containing sensitive data via software that uses SSH (e.g. rsync or borg backup)
+- connecting microservices or accessing a database via SSH tunnels
+- transfering source code containing intellectual property via git over SSH
+
+This is the readme for remote attestation in SSH. You can find the original `Portable OpenSSH` readme in `Readme_openssh.md`.
+
+https://github.com/tufteddeer/openssh-tdx-remote-attestation/compare/master...ra-ssh[See the detailed list of changes here.]
 
 == Demo
 
 This is a recording of the SSH server accepting a client connection and performing remote attestation.
 
 image::https://asciinema.org/a/W6dEe6K7qD5o9AqFw7wBMEkIC.svg["asciicast", link="https://asciinema.org/a/W6dEe6K7qD5o9AqFw7wBMEkIC"]
+
+Some parts are slowed down for more readability.
 
 == Development
 
@@ -51,7 +70,7 @@ sudo $(pwd)/sshd -f sshd_config_dev -ddd
 ./ssh test@localhost -vvv
 ```
 
-Note: In my experience, password based authentication does not work on MacOS, public key does.
+Note: In my experience, password based authentication does not work when the server runs on MacOS, public key does.
 
 
 == Testing
@@ -75,7 +94,7 @@ To simplify testing, there is a Docker image available containing
 
 Running the image will start the ssh server.
 
-The following requirements must be povided for the container to run:
+The following requirements must be provided for the container to run:
 
 - `/dev/tpmrm0` device from the host (the confidential VM)
 - `sshd_config` and `ssh_config` files
@@ -113,7 +132,7 @@ sudo docker exec -it ra-ssh ./ssh -F /config/ssh_config user@localhost -v
 When asked, type "yes" to accept the host fingerprint.
 Use "user" as the password for the "user" account.
 
-After attestaton is performed (which takes a few seconds), the connection will be established and you should be in a shell session as "user".
+After attestation is performed (which my take a few seconds), the connection will be established and you should be in a shell session as "user".
 
 Note that `sh` prompt is just a single `$` and the shell session may be interlaced with the debug logs of the `ssh` client.
 
