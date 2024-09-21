@@ -1,4 +1,4 @@
-= Remote attestation SSH
+= Integrating Intel TDX remote attestation into SSH
 
 This project adds Intel TDX remote attestation to https://github.com/openssh/openssh-portable[OpenSSH] using Microsoft Azure Attestation.
 
