@@ -34,6 +34,8 @@ The token is send to the client (_response_).
 As relying party, the client validates the signature on the JWT and veryfies the claims and the nonce.
 If the attestation is successful, the SSH connection continues, otherwise the client terminates the connection.
 
+A visual explanation can be found under <<Sequence diagram>>.
+
 == Demo
 
 This is a recording of the SSH server accepting a client connection and performing remote attestation.
@@ -168,3 +170,7 @@ TrustauthorityCliPath /config/trustauthority-cli-mock.sh
 # general
 TrustauthorityCliPath /path/to/trustauthority-cli-mock.sh
 ```
+
+== Sequence diagram
+
+image::sequence.png[Seuence diagram]
